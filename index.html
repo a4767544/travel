@@ -527,56 +527,98 @@ function deleteItem() {
 function handleImgUpload(e) {
   var files = e.target.files;
   if (!files || !files.length) return;
-  showToast('上傳中...');
-  var count = files.length;
+  showToast('處理圖片中...');
+  var total = files.length;
   var done = 0;
   for (var i = 0; i < files.length; i++) {
     (function(f) {
-      var r = new FileReader();
-      r.onload = function(ev) {
-        var base64full = ev.target.result;
-        // 去掉 data:image/jpeg;base64, 前綴
-        var base64 = base64full.split(',')[1];
-        var mimeType = f.type || 'image/jpeg';
-        var fileName = 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2) + '.jpg';
-
-        // POST 上傳到 Apps Script → Google Drive
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', API, true);
-        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-        xhr.onload = function() {
-          try {
-            var res = JSON.parse(xhr.responseText);
-            if (res.ok && res.url) {
-              pendingImages.push(res.url);
-            } else {
-              showToast('上傳失敗：' + (res.error || '未知錯誤'));
-            }
-          } catch(ex) {
-            showToast('上傳失敗');
-          }
+      compressImage(f, 800, 0.7, function(base64compressed) {
+        uploadCompressedImage(base64compressed, f.type || 'image/jpeg', function(url) {
+          if (url) pendingImages.push(url);
           done++;
-          if (done === count) {
+          if (done === total) {
             renderPreviews();
-            showToast('圖片上傳完成');
+            showToast(url ? '圖片上傳完成' : '部分圖片上傳失敗');
           }
-        };
-        xhr.onerror = function() {
-          showToast('上傳失敗');
-          done++;
-          if (done === count) renderPreviews();
-        };
-        xhr.send(
-          'action=uploadImage' +
-          '&data=' + encodeURIComponent(base64) +
-          '&mimeType=' + encodeURIComponent(mimeType) +
-          '&fileName=' + encodeURIComponent(fileName)
-        );
-      };
-      r.readAsDataURL(f);
+        });
+      });
     })(files[i]);
   }
   e.target.value = '';
+}
+
+function compressImage(file, maxWidth, quality, cb) {
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var w = img.width, h = img.height;
+      if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      var dataUrl = canvas.toDataURL('image/jpeg', quality);
+      cb(dataUrl.split(',')[1]); // 只傳 base64 部分
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function uploadCompressedImage(base64, mimeType, cb) {
+  var cbName = '__imgcb' + (++cbIndex);
+  var fileName = 'img_' + Date.now() + '.jpg';
+
+  // 因為 base64 還是太大無法放 URL，改用隱藏 form POST
+  var form = document.createElement('form');
+  form.method = 'POST';
+  form.action = API;
+  form.target = cbName;
+  form.style.display = 'none';
+
+  function addField(name, value) {
+    var inp = document.createElement('input');
+    inp.type = 'hidden';
+    inp.name = name;
+    inp.value = value;
+    form.appendChild(inp);
+  }
+
+  addField('action', 'uploadImage');
+  addField('data', base64);
+  addField('mimeType', 'image/jpeg');
+  addField('fileName', fileName);
+
+  var iframe = document.createElement('iframe');
+  iframe.name = cbName;
+  iframe.style.display = 'none';
+
+  iframe.onload = function() {
+    try {
+      var txt = iframe.contentDocument ? iframe.contentDocument.body.innerText : iframe.contentWindow.document.body.innerText;
+      var res = JSON.parse(txt);
+      cb(res.ok ? res.url : null);
+    } catch(ex) {
+      cb(null);
+    }
+    setTimeout(function() {
+      if (form.parentNode) form.parentNode.removeChild(form);
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    }, 1000);
+  };
+
+  document.body.appendChild(iframe);
+  document.body.appendChild(form);
+  form.submit();
+
+  setTimeout(function() {
+    if (iframe.parentNode) {
+      iframe.parentNode.removeChild(iframe);
+      form.parentNode.removeChild(form);
+      cb(null);
+    }
+  }, 15000);
 }
 
 function renderPreviews() {

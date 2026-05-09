@@ -191,36 +191,50 @@ function showToast(msg) {
   loadTimer = setTimeout(function() { t.className = 'toast'; }, 2000);
 }
 
-// ── API CALLS ─────────────────────────────────────────────────────
-function apiGet(params, cb) {
+// ── API CALLS (JSONP 解決 CORS 問題) ─────────────────────────────
+var cbIndex = 0;
+
+function apiCall(params, cb) {
   setLoading(30);
-  var url = API + '?action=' + params.action;
-  var xhr = new XMLHttpRequest();
-  xhr.open('GET', url, true);
-  xhr.onload = function() {
+  var cbName = '__cb' + (++cbIndex);
+  var url = API + '?callback=' + cbName;
+  for (var key in params) {
+    if (key === 'item') {
+      url += '&action=save&data=' + encodeURIComponent(JSON.stringify(params[key]));
+    } else {
+      url += '&' + key + '=' + encodeURIComponent(params[key]);
+    }
+  }
+
+  window[cbName] = function(res) {
     setLoading(100);
     setTimeout(function() { setLoading(0); }, 400);
-    try { cb(null, JSON.parse(xhr.responseText)); }
-    catch(e) { cb('解析錯誤'); }
+    delete window[cbName];
+    if (script.parentNode) script.parentNode.removeChild(script);
+    cb(null, res);
   };
-  xhr.onerror = function() { setLoading(0); cb('網路錯誤'); };
-  xhr.send();
+
+  var script = document.createElement('script');
+  script.src = url;
+  script.onerror = function() {
+    setLoading(0);
+    delete window[cbName];
+    cb('網路錯誤');
+  };
+  document.head.appendChild(script);
+
+  // timeout 10秒
+  setTimeout(function() {
+    if (window[cbName]) {
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      cb('逾時');
+    }
+  }, 10000);
 }
 
-function apiPost(body, cb) {
-  setLoading(30);
-  var xhr = new XMLHttpRequest();
-  xhr.open('POST', API, true);
-  xhr.setRequestHeader('Content-Type', 'text/plain');
-  xhr.onload = function() {
-    setLoading(100);
-    setTimeout(function() { setLoading(0); }, 400);
-    try { cb(null, JSON.parse(xhr.responseText)); }
-    catch(e) { cb('解析錯誤'); }
-  };
-  xhr.onerror = function() { setLoading(0); cb('網路錯誤'); };
-  xhr.send(JSON.stringify(body));
-}
+function apiGet(params, cb) { apiCall(params, cb); }
+function apiPost(body, cb) { apiCall(body, cb); }
 
 // ── INIT：載入資料 ────────────────────────────────────────────────
 function loadAll() {
@@ -402,7 +416,7 @@ function toggleDone(id) {
       var item = items[i];
       render();
       apiPost({action:'save', item:item}, function(err) {
-        if (err) showToast('同步失敗');
+        showToast(err ? '同步失敗' : '已儲存');
       });
       break;
     }
@@ -422,7 +436,7 @@ function startEditLabel(dayObj, field, labelEl) {
     var val = input.value.trim();
     dayObj[field] = val;
     render();
-    apiPost({action:'updateDay', dayId:dayObj.id, field:field, value:val}, function(err) {
+    apiCall({action:'updateDay', dayId:dayObj.id, field:field, value:val}, function(err) {
       showToast(err ? '同步失敗' : '已儲存');
     });
   }
@@ -504,8 +518,8 @@ function deleteItem() {
   for (var i = 0; i < items.length; i++) if (items[i].id !== delId) next.push(items[i]);
   items = next;
   closeModal(); render();
-  apiPost({action:'delete', id:delId}, function(err) {
-    showToast(err ? '\u540C\u6B65\u5931\u6557' : '\u5DF2\u522A\u9664');
+  apiCall({action:'delete', id:delId}, function(err) {
+    showToast(err ? '同步失敗' : '已刪除');
   });
 }
 

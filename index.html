@@ -378,10 +378,19 @@ function makeItemEl(item) {
   if (item.images && item.images.length > 0) {
     var strip = el('div', 'item-images');
     for (var i = 0; i < item.images.length; i++) {
-      (function(src, idx, itemId) {
+      (function(raw, idx, itemId) {
+        var parsed = parseImage(raw);
         var img = document.createElement('img');
-        img.className = 'item-img'; img.src = src;
-        img.onclick = function(e) { e.stopPropagation(); openLightbox(itemId, idx); };
+        img.className = 'item-img';
+        img.src = parsed.thumb;
+        img.onclick = function(e) {
+          e.stopPropagation();
+          if (parsed.drive && parsed.drive.indexOf('http') === 0) {
+            window.open(parsed.drive, '_blank');
+          } else {
+            openLightbox(itemId, idx);
+          }
+        };
         strip.appendChild(img);
       })(item.images[i], i, item.id);
     }
@@ -532,16 +541,40 @@ function handleImgUpload(e) {
   var done = 0;
   for (var i = 0; i < files.length; i++) {
     (function(f) {
-      compressImage(f, 800, 0.7, function(base64compressed) {
-        uploadCompressedImage(base64compressed, f.type || 'image/jpeg', function(url) {
-          if (url) pendingImages.push(url);
-          done++;
-          if (done === total) {
-            renderPreviews();
-            showToast(url ? '圖片上傳完成' : '部分圖片上傳失敗');
-          }
+      // 同時壓縮縮圖 + 上傳原圖到 Drive
+      var thumbDone = false, driveDone = false;
+      var thumbData = null, driveUrl = null;
+
+      function tryFinish() {
+        if (!thumbDone || !driveDone) return;
+        if (thumbData) {
+          // 格式：thumb::base64DATA||drive::DRIVEURL
+          var combined = 'thumb::' + thumbData + '||drive::' + (driveUrl || '');
+          pendingImages.push(combined);
+        }
+        done++;
+        if (done === total) {
+          renderPreviews();
+          showToast('圖片處理完成');
+        }
+      }
+
+      // 壓縮縮圖（寬400px, 品質0.5 → 約30-50KB）
+      compressImage(f, 400, 0.5, function(b64thumb) {
+        thumbData = b64thumb;
+        thumbDone = true;
+        tryFinish();
+      });
+
+      // 上傳原圖到 Drive
+      compressImage(f, 1920, 0.9, function(b64orig) {
+        uploadToDrive(b64orig, f.name || ('img_' + Date.now() + '.jpg'), function(url) {
+          driveUrl = url || '';
+          driveDone = true;
+          tryFinish();
         });
       });
+
     })(files[i]);
   }
   e.target.value = '';
@@ -556,78 +589,83 @@ function compressImage(file, maxWidth, quality, cb) {
       var w = img.width, h = img.height;
       if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
       canvas.width = w; canvas.height = h;
-      var ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, w, h);
-      var dataUrl = canvas.toDataURL('image/jpeg', quality);
-      cb(dataUrl.split(',')[1]); // 只傳 base64 部分
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      cb(canvas.toDataURL('image/jpeg', quality).split(',')[1]);
     };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
 }
 
-function uploadCompressedImage(base64, mimeType, cb) {
-  var cbName = '__imgcb' + (++cbIndex);
-  var fileName = 'img_' + Date.now() + '.jpg';
-
-  // 因為 base64 還是太大無法放 URL，改用隱藏 form POST
+function uploadToDrive(base64, fileName, cb) {
+  var iframeName = '__drvcb' + (++cbIndex);
   var form = document.createElement('form');
   form.method = 'POST';
   form.action = API;
-  form.target = cbName;
+  form.target = iframeName;
   form.style.display = 'none';
 
-  function addField(name, value) {
+  function addField(n, v) {
     var inp = document.createElement('input');
-    inp.type = 'hidden';
-    inp.name = name;
-    inp.value = value;
+    inp.type = 'hidden'; inp.name = n; inp.value = v;
     form.appendChild(inp);
   }
-
   addField('action', 'uploadImage');
   addField('data', base64);
   addField('mimeType', 'image/jpeg');
   addField('fileName', fileName);
 
   var iframe = document.createElement('iframe');
-  iframe.name = cbName;
+  iframe.name = iframeName;
   iframe.style.display = 'none';
+
+  var timer = setTimeout(function() {
+    cleanup(); cb(null);
+  }, 20000);
+
+  function cleanup() {
+    clearTimeout(timer);
+    if (form.parentNode) form.parentNode.removeChild(form);
+    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+  }
 
   iframe.onload = function() {
     try {
-      var txt = iframe.contentDocument ? iframe.contentDocument.body.innerText : iframe.contentWindow.document.body.innerText;
+      var txt = (iframe.contentDocument || iframe.contentWindow.document).body.innerText;
       var res = JSON.parse(txt);
+      cleanup();
       cb(res.ok ? res.url : null);
     } catch(ex) {
-      cb(null);
+      cleanup(); cb(null);
     }
-    setTimeout(function() {
-      if (form.parentNode) form.parentNode.removeChild(form);
-      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-    }, 1000);
   };
 
   document.body.appendChild(iframe);
   document.body.appendChild(form);
   form.submit();
+}
 
-  setTimeout(function() {
-    if (iframe.parentNode) {
-      iframe.parentNode.removeChild(iframe);
-      form.parentNode.removeChild(form);
-      cb(null);
-    }
-  }, 15000);
+function parseImage(raw) {
+  // 格式：thumb::BASE64||drive::URL 或舊格式（純 URL）
+  if (raw && raw.indexOf('thumb::') === 0) {
+    var parts = raw.split('||drive::');
+    var thumb = 'data:image/jpeg;base64,' + parts[0].replace('thumb::', '');
+    var drive = parts[1] || '';
+    return { thumb: thumb, drive: drive };
+  }
+  // 舊格式：直接是 URL
+  return { thumb: raw, drive: raw };
 }
 
 function renderPreviews() {
   var list = document.getElementById('imgPreviewList');
   while (list.firstChild) list.removeChild(list.firstChild);
   for (var i = 0; i < pendingImages.length; i++) {
-    (function(src, idx) {
+    (function(raw, idx) {
+      var parsed = parseImage(raw);
       var wrap = el('div', 'img-pw');
-      var img = document.createElement('img'); img.src = src;
+      var img = document.createElement('img');
+      img.src = parsed.thumb;
       var rm = tx(el('button', 'img-rm'), '\u2715');
       rm.onclick = (function(n) { return function() { pendingImages.splice(n,1); renderPreviews(); }; })(idx);
       wrap.appendChild(img); wrap.appendChild(rm);

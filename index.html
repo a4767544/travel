@@ -46,18 +46,15 @@ main{max-width:680px;margin:0 auto;padding:16px;padding-bottom:50px;}
 .item-location{margin-top:8px;}
 .loc-link{font-size:1rem;color:#b71c1c;text-decoration:none;display:inline-flex;align-items:center;gap:6px;font-weight:700;padding:4px 0;}
 .item-note{margin-top:8px;font-size:.95rem;color:#333;line-height:1.6;background:#fff9e6;padding:8px 10px;border-radius:8px;border-left:3px solid var(--gold);}
-.item-images{display:flex;gap:8px;padding:0 16px 14px;overflow-x:auto;scrollbar-width:none;}
-.item-images::-webkit-scrollbar{display:none;}
-.item-img{flex-shrink:0;width:90px;height:90px;object-fit:cover;border-radius:10px;cursor:pointer;border:2px solid #eee;}
+.item-links{padding:0 16px 14px;display:flex;flex-direction:column;gap:6px;}
+.item-link-btn{display:inline-flex;align-items:center;gap:6px;background:#f0f4ff;border:1.5px solid #c5d0f0;border-radius:8px;padding:8px 14px;font-size:.95rem;color:#1a3a8f;text-decoration:none;font-weight:700;font-family:'Noto Sans TC',sans-serif;width:fit-content;}
 .item-actions{display:flex;justify-content:flex-end;padding:0 16px 12px;}
 .edit-btn{background:#f5f5f5;border:1.5px solid #ccc;border-radius:8px;color:#333;font-size:.9rem;cursor:pointer;padding:6px 14px;font-family:'Noto Sans TC',sans-serif;font-weight:500;}
 .add-btn{width:100%;background:#fff;border:2px dashed #aaa;border-radius:14px;padding:16px;color:#444;font-size:1rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px;font-family:'Noto Sans TC',sans-serif;}
 .empty{text-align:center;padding:40px;color:#aaa;font-size:1rem;}
-/* LOADING */
 .loading-bar{position:fixed;top:0;left:0;height:4px;background:var(--gold);transition:width .3s;z-index:999;width:0;}
 .toast{position:fixed;bottom:36px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:12px 24px;border-radius:24px;font-size:.95rem;z-index:500;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
 .toast.show{opacity:1;}
-/* MODAL */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;align-items:flex-end;justify-content:center;}
 .overlay.open{display:flex;}
 .modal{background:#fff;width:100%;max-width:680px;border-radius:24px 24px 0 0;padding:28px 20px 40px;max-height:92vh;overflow-y:auto;}
@@ -71,18 +68,11 @@ main{max-width:680px;margin:0 auto;padding:16px;padding-bottom:50px;}
 .btn-save{flex:1;background:var(--red);color:#fff;border:none;border-radius:12px;padding:16px;font-size:1.05rem;font-weight:700;cursor:pointer;font-family:'Noto Sans TC',sans-serif;}
 .btn-cancel{flex:.5;background:#e0e0e0;color:#333;border:none;border-radius:12px;padding:16px;font-size:1.05rem;font-weight:700;cursor:pointer;font-family:'Noto Sans TC',sans-serif;}
 .btn-delete{background:none;border:2px solid var(--red2);color:var(--red2);border-radius:12px;padding:16px;font-size:1rem;font-weight:700;cursor:pointer;font-family:'Noto Sans TC',sans-serif;}
-.img-upload-area{border:2px dashed #aaa;border-radius:12px;padding:18px;text-align:center;cursor:pointer;margin-top:6px;background:#fafafa;}
-.img-preview-list{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;}
-.img-pw{position:relative;width:80px;height:80px;}
-.img-pw img{width:80px;height:80px;object-fit:cover;border-radius:10px;border:2px solid #eee;}
-.img-rm{position:absolute;top:-8px;right:-8px;width:24px;height:24px;background:var(--red2);color:#fff;border:none;border-radius:50%;font-size:14px;cursor:pointer;line-height:1;font-weight:700;}
-.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:300;align-items:center;justify-content:center;flex-direction:column;}
-.lightbox.open{display:flex;}
-.lightbox img{max-width:95vw;max-height:78vh;object-fit:contain;border-radius:10px;}
-.lb-close{position:absolute;top:20px;right:24px;color:#fff;font-size:2.4rem;cursor:pointer;background:none;border:none;font-weight:700;}
-.lb-nav{display:flex;gap:20px;margin-top:20px;}
-.lb-nav button{background:rgba(255,255,255,.2);border:none;color:#fff;padding:12px 28px;border-radius:24px;cursor:pointer;font-size:1.1rem;font-family:'Noto Sans TC',sans-serif;font-weight:700;}
-.lb-counter{color:#ddd;font-size:.9rem;margin-top:10px;font-weight:500;}
+/* 自訂連結編輯區 */
+.link-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;margin-bottom:8px;}
+.link-row input{margin-bottom:0;}
+.link-rm{background:var(--red2);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:1rem;cursor:pointer;font-weight:700;}
+.link-add{width:100%;background:none;border:2px dashed #aaa;border-radius:10px;padding:12px;color:#555;font-size:.95rem;font-weight:700;cursor:pointer;font-family:'Noto Sans TC',sans-serif;margin-top:4px;}
 </style>
 </head>
 <body>
@@ -117,12 +107,9 @@ main{max-width:680px;margin:0 auto;padding:16px;padding-bottom:50px;}
     <div class="field"><label>位置名稱（顯示用）</label><input type="text" id="fLoc" placeholder="例：天安門廣場"></div>
     <div class="field"><label>地圖連結（貼上 Google Maps 網址）</label><input type="text" id="fMapUrl" placeholder="https://maps.app.goo.gl/..."></div>
     <div class="field">
-      <label>圖片（可多張）</label>
-      <div class="img-upload-area" id="uploadArea">
-        <input type="file" id="fImgInput" accept="image/*" multiple style="display:none">
-        <span style="font-size:.8rem;color:var(--muted)">&#128247; 點此選取圖片</span>
-      </div>
-      <div class="img-preview-list" id="imgPreviewList"></div>
+      <label>自訂連結（可多筆）</label>
+      <div id="linkRows"></div>
+      <button class="link-add" id="btnAddLink">＋ 新增連結</button>
     </div>
     <div class="field"><label>備注</label><textarea id="fNote" placeholder="例：需提前預約，帶好護照"></textarea></div>
     <div class="modal-actions">
@@ -133,20 +120,9 @@ main{max-width:680px;margin:0 auto;padding:16px;padding-bottom:50px;}
   </div>
 </div>
 
-<div class="lightbox" id="lightbox">
-  <button class="lb-close" id="lbClose">&#10005;</button>
-  <img id="lbImg" src="" alt="">
-  <div class="lb-counter" id="lbCounter"></div>
-  <div class="lb-nav">
-    <button id="lbPrev">&#9664; 上一張</button>
-    <button id="lbNext">下一張 &#9654;</button>
-  </div>
-</div>
-
 <script>
 (function() {
 
-// ★★★ 請將下面這行換成你的 Apps Script 網址 ★★★
 var API = 'https://script.google.com/macros/s/AKfycbwMOnQ4RBgQZKHxtLkdEoITn-M2UEV8JYkBTbH6WQ0HrqCISMwXwqrD8JoN3o1eafmH/exec';
 
 var DAYS = [
@@ -161,39 +137,26 @@ var DAYS = [
 var items = [];
 var currentDay = 1;
 var editingId = null;
-var pendingImages = [];
-var lbImages = [];
-var lbIndex = 0;
+var pendingLinks = []; // [{label:'', url:''}]
+var cbIndex = 0;
 
 function uid() {
   return 'x' + Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
-
-function el(tag, cls) {
-  var e = document.createElement(tag);
-  if (cls) e.className = cls;
-  return e;
-}
-
+function el(tag, cls) { var e = document.createElement(tag); if (cls) e.className = cls; return e; }
 function tx(node, text) { node.textContent = text; return node; }
 
 // ── LOADING / TOAST ───────────────────────────────────────────────
-var loadTimer = null;
-function setLoading(pct) {
-  document.getElementById('loadingBar').style.width = pct + '%';
-}
-
+var toastTimer = null;
+function setLoading(pct) { document.getElementById('loadingBar').style.width = pct + '%'; }
 function showToast(msg) {
   var t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast show';
-  clearTimeout(loadTimer);
-  loadTimer = setTimeout(function() { t.className = 'toast'; }, 2000);
+  t.textContent = msg; t.className = 'toast show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { t.className = 'toast'; }, 2500);
 }
 
-// ── API CALLS (JSONP 解決 CORS 問題) ─────────────────────────────
-var cbIndex = 0;
-
+// ── API (JSONP) ───────────────────────────────────────────────────
 function apiCall(params, cb) {
   setLoading(30);
   var cbName = '__cb' + (++cbIndex);
@@ -205,7 +168,6 @@ function apiCall(params, cb) {
       url += '&' + key + '=' + encodeURIComponent(params[key]);
     }
   }
-
   window[cbName] = function(res) {
     setLoading(100);
     setTimeout(function() { setLoading(0); }, 400);
@@ -213,46 +175,26 @@ function apiCall(params, cb) {
     if (script.parentNode) script.parentNode.removeChild(script);
     cb(null, res);
   };
-
   var script = document.createElement('script');
   script.src = url;
-  script.onerror = function() {
-    setLoading(0);
-    delete window[cbName];
-    cb('網路錯誤');
-  };
+  script.onerror = function() { setLoading(0); delete window[cbName]; cb('網路錯誤'); };
   document.head.appendChild(script);
-
-  // timeout 10秒
   setTimeout(function() {
-    if (window[cbName]) {
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-      cb('逾時');
-    }
+    if (window[cbName]) { delete window[cbName]; if (script.parentNode) script.parentNode.removeChild(script); cb('逾時'); }
   }, 10000);
 }
 
-function apiGet(params, cb) { apiCall(params, cb); }
-function apiPost(body, cb) { apiCall(body, cb); }
-
-// ── INIT：載入資料 ────────────────────────────────────────────────
+// ── LOAD ──────────────────────────────────────────────────────────
 function loadAll() {
-  apiGet({action:'getDays'}, function(err, res) {
-    if (!err && res.days && res.days.length) {
-      DAYS = res.days;
-      initDaySelect();
-    }
-    apiGet({action:'getAll'}, function(err2, res2) {
-      if (!err2 && res2.items) {
-        items = res2.items;
-      }
+  apiCall({action:'getDays'}, function(err, res) {
+    if (!err && res.days && res.days.length) { DAYS = res.days; initDaySelect(); }
+    apiCall({action:'getAll'}, function(err2, res2) {
+      if (!err2 && res2.items) items = res2.items;
       render();
     });
   });
 }
 
-// ── DAY SELECT ────────────────────────────────────────────────────
 function initDaySelect() {
   var sel = document.getElementById('fDay');
   while (sel.firstChild) sel.removeChild(sel.firstChild);
@@ -265,11 +207,7 @@ function initDaySelect() {
 }
 
 // ── RENDER ────────────────────────────────────────────────────────
-function render() {
-  renderTabs();
-  renderContent();
-  updateProgress();
-}
+function render() { renderTabs(); renderContent(); updateProgress(); }
 
 function renderTabs() {
   var bar = document.getElementById('tabBar');
@@ -287,49 +225,29 @@ function renderTabs() {
 function renderContent() {
   var main = document.getElementById('mainContent');
   while (main.firstChild) main.removeChild(main.firstChild);
-
   for (var i = 0; i < DAYS.length; i++) {
     var d = DAYS[i];
     var section = el('div', d.id === currentDay ? 'day-section active' : 'day-section');
     section.id = 'day-' + d.id;
 
-    // header
     var hdr = el('div', 'day-header');
     var badge = tx(el('span', 'day-badge'), 'DAY ' + d.id);
     var info = el('div');
-
     var dateEl = tx(el('div', 'day-date editable-label'), d.date);
-    (function(dayObj) {
-      dateEl.onclick = function(e) { e.stopPropagation(); startEditLabel(dayObj, 'date', this); };
-    })(d);
+    (function(dayObj) { dateEl.onclick = function(e) { e.stopPropagation(); startEditLabel(dayObj, 'date', this); }; })(d);
     info.appendChild(dateEl);
-
     var themeEl = tx(el('div', d.theme ? 'day-theme editable-label' : 'day-theme editable-label placeholder'), d.theme || '點擊新增主題');
-    (function(dayObj) {
-      themeEl.onclick = function(e) { e.stopPropagation(); startEditLabel(dayObj, 'theme', this); };
-    })(d);
+    (function(dayObj) { themeEl.onclick = function(e) { e.stopPropagation(); startEditLabel(dayObj, 'theme', this); }; })(d);
     info.appendChild(themeEl);
-
-    hdr.appendChild(badge);
-    hdr.appendChild(info);
+    hdr.appendChild(badge); hdr.appendChild(info);
     section.appendChild(hdr);
 
-    // items
     var dayItems = [];
-    for (var j = 0; j < items.length; j++) {
-      if (String(items[j].day) === String(d.id)) dayItems.push(items[j]);
-    }
-    dayItems.sort(function(a, b) {
-      var ta = a.time || '99:99', tb = b.time || '99:99';
-      return ta < tb ? -1 : ta > tb ? 1 : 0;
-    });
+    for (var j = 0; j < items.length; j++) { if (String(items[j].day) === String(d.id)) dayItems.push(items[j]); }
+    dayItems.sort(function(a, b) { var ta = a.time||'99:99', tb = b.time||'99:99'; return ta < tb ? -1 : ta > tb ? 1 : 0; });
 
-    if (dayItems.length === 0) {
-      section.appendChild(tx(el('div', 'empty'), '尚無行程，點下方新增'));
-    }
-    for (var k = 0; k < dayItems.length; k++) {
-      section.appendChild(makeItemEl(dayItems[k]));
-    }
+    if (dayItems.length === 0) section.appendChild(tx(el('div', 'empty'), '尚無行程，點下方新增'));
+    for (var k = 0; k < dayItems.length; k++) section.appendChild(makeItemEl(dayItems[k]));
 
     (function(dayId) {
       var addBtn = tx(el('button', 'add-btn'), '\uff0b 新增行程');
@@ -360,41 +278,33 @@ function makeItemEl(item) {
 
   if (item.loc) {
     var locDiv = el('div', 'item-location');
-    var url = (item.mapUrl && item.mapUrl.trim()) ? item.mapUrl.trim()
+    var mapUrl = (item.mapUrl && item.mapUrl.trim()) ? item.mapUrl.trim()
       : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.loc);
     var a = el('a', 'loc-link');
     tx(a, '\uD83D\uDCCD ' + item.loc);
-    a.href = url; a.target = '_blank';
+    a.href = mapUrl; a.target = '_blank';
     a.onclick = function(e) { e.stopPropagation(); };
-    locDiv.appendChild(a);
-    content.appendChild(locDiv);
+    locDiv.appendChild(a); content.appendChild(locDiv);
   }
 
   if (item.note) content.appendChild(tx(el('div', 'item-note'), '\uD83D\uDCAC ' + item.note));
-
   itemMain.appendChild(content);
   wrap.appendChild(itemMain);
 
-  if (item.images && item.images.length > 0) {
-    var strip = el('div', 'item-images');
-    for (var i = 0; i < item.images.length; i++) {
-      (function(raw, idx, itemId) {
-        var parsed = parseImage(raw);
-        var img = document.createElement('img');
-        img.className = 'item-img';
-        img.src = parsed.thumb;
-        img.onclick = function(e) {
-          e.stopPropagation();
-          if (parsed.drive && parsed.drive.indexOf('http') === 0) {
-            window.open(parsed.drive, '_blank');
-          } else {
-            openLightbox(itemId, idx);
-          }
-        };
-        strip.appendChild(img);
-      })(item.images[i], i, item.id);
+  // 自訂連結
+  var links = parseLinks(item.links);
+  if (links.length > 0) {
+    var linkArea = el('div', 'item-links');
+    for (var i = 0; i < links.length; i++) {
+      (function(lk) {
+        var a = el('a', 'item-link-btn');
+        tx(a, '\uD83D\uDD17 ' + lk.label);
+        a.href = lk.url; a.target = '_blank';
+        a.onclick = function(e) { e.stopPropagation(); };
+        linkArea.appendChild(a);
+      })(links[i]);
     }
-    wrap.appendChild(strip);
+    wrap.appendChild(linkArea);
   }
 
   var acts = el('div', 'item-actions');
@@ -405,11 +315,34 @@ function makeItemEl(item) {
   return wrap;
 }
 
+// 連結格式：「名稱::網址||名稱::網址」
+function parseLinks(raw) {
+  if (!raw || !raw.trim()) return [];
+  var result = [];
+  var parts = raw.split('||');
+  for (var i = 0; i < parts.length; i++) {
+    var p = parts[i].trim();
+    if (!p) continue;
+    var idx = p.indexOf('::');
+    if (idx > -1) {
+      result.push({ label: p.substring(0, idx), url: p.substring(idx + 2) });
+    }
+  }
+  return result;
+}
+
+function serializeLinks(arr) {
+  var parts = [];
+  for (var i = 0; i < arr.length; i++) {
+    if (arr[i].label || arr[i].url) parts.push(arr[i].label + '::' + arr[i].url);
+  }
+  return parts.join('||');
+}
+
 function updateProgress() {
   var total = items.length, done = 0;
   for (var i = 0; i < items.length; i++) if (items[i].done) done++;
-  var pct = total === 0 ? 0 : Math.round(done / total * 100);
-  tx(document.getElementById('progressNum'), pct + '%');
+  tx(document.getElementById('progressNum'), total === 0 ? '0%' : Math.round(done/total*100) + '%');
 }
 
 // ── ACTIONS ───────────────────────────────────────────────────────
@@ -422,17 +355,13 @@ function toggleDone(id) {
   for (var i = 0; i < items.length; i++) {
     if (items[i].id === id) {
       items[i].done = !items[i].done;
-      var item = items[i];
-      render();
-      apiPost({action:'save', item:item}, function(err) {
-        showToast(err ? '同步失敗' : '已儲存');
-      });
+      var item = items[i]; render();
+      apiCall({action:'save', item:item}, function(err) { showToast(err ? '同步失敗' : '已儲存'); });
       break;
     }
   }
 }
 
-// ── EDIT DAY LABEL ────────────────────────────────────────────────
 function startEditLabel(dayObj, field, labelEl) {
   var current = dayObj[field] || '';
   var input = el('input', 'inline-edit');
@@ -440,14 +369,9 @@ function startEditLabel(dayObj, field, labelEl) {
   input.placeholder = field === 'theme' ? '主題（如：故宮・長城）' : '日期說明';
   labelEl.parentNode.replaceChild(input, labelEl);
   input.focus(); input.select();
-
   function commit() {
-    var val = input.value.trim();
-    dayObj[field] = val;
-    render();
-    apiCall({action:'updateDay', dayId:dayObj.id, field:field, value:val}, function(err) {
-      showToast(err ? '同步失敗' : '已儲存');
-    });
+    var val = input.value.trim(); dayObj[field] = val; render();
+    apiCall({action:'updateDay', dayId:dayObj.id, field:field, value:val}, function(err) { showToast(err ? '同步失敗' : '已儲存'); });
   }
   input.onblur = commit;
   input.onkeydown = function(e) {
@@ -459,7 +383,7 @@ function startEditLabel(dayObj, field, labelEl) {
 // ── MODAL ─────────────────────────────────────────────────────────
 function openModal(day) {
   editingId = null;
-  tx(document.getElementById('modalTitle'), '\u2795 \u65B0\u589E\u884C\u7A0B');
+  tx(document.getElementById('modalTitle'), '新增行程');
   document.getElementById('btnDelete').style.display = 'none';
   document.getElementById('fDay').value = day;
   document.getElementById('fTime').value = '';
@@ -467,7 +391,8 @@ function openModal(day) {
   document.getElementById('fLoc').value = '';
   document.getElementById('fMapUrl').value = '';
   document.getElementById('fNote').value = '';
-  pendingImages = []; renderPreviews();
+  pendingLinks = [];
+  renderLinkRows();
   document.getElementById('overlay').className = 'overlay open';
 }
 
@@ -476,7 +401,7 @@ function openEdit(id) {
   for (var i = 0; i < items.length; i++) if (items[i].id === id) { item = items[i]; break; }
   if (!item) return;
   editingId = id;
-  tx(document.getElementById('modalTitle'), '\u270F\uFE0F \u7DE8\u8F2F\u884C\u7A0B');
+  tx(document.getElementById('modalTitle'), '編輯行程');
   document.getElementById('btnDelete').style.display = 'inline-block';
   document.getElementById('fDay').value = item.day;
   document.getElementById('fTime').value = item.time || '';
@@ -484,8 +409,8 @@ function openEdit(id) {
   document.getElementById('fLoc').value = item.loc || '';
   document.getElementById('fMapUrl').value = item.mapUrl || '';
   document.getElementById('fNote').value = item.note || '';
-  pendingImages = item.images ? item.images.slice() : [];
-  renderPreviews();
+  pendingLinks = parseLinks(item.links);
+  renderLinkRows();
   document.getElementById('overlay').className = 'overlay open';
 }
 
@@ -493,7 +418,7 @@ function closeModal() { document.getElementById('overlay').className = 'overlay'
 
 function saveItem() {
   var name = document.getElementById('fName').value.trim();
-  if (!name) { alert('\u8ACB\u8F38\u5165\u540D\u7A31'); return; }
+  if (!name) { alert('請輸入名稱'); return; }
   var data = {
     id: editingId || uid(),
     day: parseInt(document.getElementById('fDay').value, 10),
@@ -502,7 +427,7 @@ function saveItem() {
     loc: document.getElementById('fLoc').value.trim(),
     mapUrl: document.getElementById('fMapUrl').value.trim(),
     note: document.getElementById('fNote').value.trim(),
-    images: pendingImages.slice(),
+    links: serializeLinks(pendingLinks),
     done: false
   };
   if (editingId) {
@@ -510,195 +435,59 @@ function saveItem() {
       if (items[i].id === editingId) { data.done = items[i].done; items[i] = data; break; }
     }
   } else {
-    items.push(data);
-    currentDay = data.day;
+    items.push(data); currentDay = data.day;
   }
   closeModal(); render();
-  apiPost({action:'save', item:data}, function(err) {
-    showToast(err ? '\u540C\u6B65\u5931\u6557' : '\u5DF2\u5132\u5B58\u81F3\u96F2\u7AEF');
-  });
+  apiCall({action:'save', item:data}, function(err) { showToast(err ? '同步失敗' : '已儲存至雲端'); });
 }
 
 function deleteItem() {
   if (!editingId) return;
-  if (!confirm('\u78BA\u5B9A\u8981\u522A\u9664\u9019\u500B\u884C\u7A0B\u55CE\uFF1F')) return;
+  if (!confirm('確定要刪除這個行程嗎？')) return;
   var delId = editingId;
   var next = [];
   for (var i = 0; i < items.length; i++) if (items[i].id !== delId) next.push(items[i]);
-  items = next;
-  closeModal(); render();
-  apiCall({action:'delete', id:delId}, function(err) {
-    showToast(err ? '同步失敗' : '已刪除');
-  });
+  items = next; closeModal(); render();
+  apiCall({action:'delete', id:delId}, function(err) { showToast(err ? '同步失敗' : '已刪除'); });
 }
 
-// ── IMAGES ────────────────────────────────────────────────────────
-function handleImgUpload(e) {
-  var files = e.target.files;
-  if (!files || !files.length) return;
-  showToast('處理圖片中...');
-  var total = files.length;
-  var done = 0;
-  for (var i = 0; i < files.length; i++) {
-    (function(f) {
-      // 同時壓縮縮圖 + 上傳原圖到 Drive
-      var thumbDone = false, driveDone = false;
-      var thumbData = null, driveUrl = null;
+// ── 自訂連結 ──────────────────────────────────────────────────────
+function renderLinkRows() {
+  var container = document.getElementById('linkRows');
+  while (container.firstChild) container.removeChild(container.firstChild);
+  for (var i = 0; i < pendingLinks.length; i++) {
+    (function(idx) {
+      var row = el('div', 'link-row');
+      var inpLabel = document.createElement('input');
+      inpLabel.type = 'text'; inpLabel.placeholder = '名稱（如：景點照片）';
+      inpLabel.value = pendingLinks[idx].label;
+      inpLabel.oninput = (function(n) { return function() { pendingLinks[n].label = this.value; }; })(idx);
 
-      function tryFinish() {
-        if (!thumbDone || !driveDone) return;
-        if (thumbData) {
-          // 格式：thumb::base64DATA||drive::DRIVEURL
-          var combined = 'thumb::' + thumbData + '||drive::' + (driveUrl || '');
-          pendingImages.push(combined);
-        }
-        done++;
-        if (done === total) {
-          renderPreviews();
-          showToast('圖片處理完成');
-        }
-      }
+      var inpUrl = document.createElement('input');
+      inpUrl.type = 'text'; inpUrl.placeholder = 'https://...';
+      inpUrl.value = pendingLinks[idx].url;
+      inpUrl.oninput = (function(n) { return function() { pendingLinks[n].url = this.value; }; })(idx);
 
-      // 壓縮縮圖（寬400px, 品質0.5 → 約30-50KB）
-      compressImage(f, 400, 0.5, function(b64thumb) {
-        thumbData = b64thumb;
-        thumbDone = true;
-        tryFinish();
-      });
+      var rmBtn = tx(el('button', 'link-rm'), '\u2715');
+      rmBtn.onclick = (function(n) { return function() { pendingLinks.splice(n, 1); renderLinkRows(); }; })(idx);
 
-      // 上傳原圖到 Drive
-      compressImage(f, 1920, 0.9, function(b64orig) {
-        uploadToDrive(b64orig, f.name || ('img_' + Date.now() + '.jpg'), function(url) {
-          driveUrl = url || '';
-          driveDone = true;
-          tryFinish();
-        });
-      });
-
-    })(files[i]);
-  }
-  e.target.value = '';
-}
-
-function compressImage(file, maxWidth, quality, cb) {
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    var img = new Image();
-    img.onload = function() {
-      var canvas = document.createElement('canvas');
-      var w = img.width, h = img.height;
-      if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      cb(canvas.toDataURL('image/jpeg', quality).split(',')[1]);
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-function uploadToDrive(base64, fileName, cb) {
-  var iframeName = '__drvcb' + (++cbIndex);
-  var form = document.createElement('form');
-  form.method = 'POST';
-  form.action = API;
-  form.target = iframeName;
-  form.style.display = 'none';
-
-  function addField(n, v) {
-    var inp = document.createElement('input');
-    inp.type = 'hidden'; inp.name = n; inp.value = v;
-    form.appendChild(inp);
-  }
-  addField('action', 'uploadImage');
-  addField('data', base64);
-  addField('mimeType', 'image/jpeg');
-  addField('fileName', fileName);
-
-  var iframe = document.createElement('iframe');
-  iframe.name = iframeName;
-  iframe.style.display = 'none';
-
-  var timer = setTimeout(function() {
-    cleanup(); cb(null);
-  }, 20000);
-
-  function cleanup() {
-    clearTimeout(timer);
-    if (form.parentNode) form.parentNode.removeChild(form);
-    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-  }
-
-  iframe.onload = function() {
-    try {
-      var txt = (iframe.contentDocument || iframe.contentWindow.document).body.innerText;
-      var res = JSON.parse(txt);
-      cleanup();
-      cb(res.ok ? res.url : null);
-    } catch(ex) {
-      cleanup(); cb(null);
-    }
-  };
-
-  document.body.appendChild(iframe);
-  document.body.appendChild(form);
-  form.submit();
-}
-
-function parseImage(raw) {
-  // 格式：thumb::BASE64||drive::URL 或舊格式（純 URL）
-  if (raw && raw.indexOf('thumb::') === 0) {
-    var parts = raw.split('||drive::');
-    var thumb = 'data:image/jpeg;base64,' + parts[0].replace('thumb::', '');
-    var drive = parts[1] || '';
-    return { thumb: thumb, drive: drive };
-  }
-  // 舊格式：直接是 URL
-  return { thumb: raw, drive: raw };
-}
-
-function renderPreviews() {
-  var list = document.getElementById('imgPreviewList');
-  while (list.firstChild) list.removeChild(list.firstChild);
-  for (var i = 0; i < pendingImages.length; i++) {
-    (function(raw, idx) {
-      var parsed = parseImage(raw);
-      var wrap = el('div', 'img-pw');
-      var img = document.createElement('img');
-      img.src = parsed.thumb;
-      var rm = tx(el('button', 'img-rm'), '\u2715');
-      rm.onclick = (function(n) { return function() { pendingImages.splice(n,1); renderPreviews(); }; })(idx);
-      wrap.appendChild(img); wrap.appendChild(rm);
-      list.appendChild(wrap);
-    })(pendingImages[i], i);
+      row.appendChild(inpLabel); row.appendChild(inpUrl); row.appendChild(rmBtn);
+      container.appendChild(row);
+    })(i);
   }
 }
 
-// ── LIGHTBOX ──────────────────────────────────────────────────────
-function openLightbox(itemId, idx) {
-  var item = null;
-  for (var i = 0; i < items.length; i++) if (items[i].id === itemId) { item = items[i]; break; }
-  if (!item || !item.images.length) return;
-  lbImages = item.images; lbIndex = idx; showLb();
-  document.getElementById('lightbox').className = 'lightbox open';
+function addLinkRow() {
+  pendingLinks.push({ label: '', url: '' });
+  renderLinkRows();
 }
-function showLb() {
-  document.getElementById('lbImg').src = lbImages[lbIndex];
-  tx(document.getElementById('lbCounter'), (lbIndex+1) + ' / ' + lbImages.length);
-}
-function closeLb() { document.getElementById('lightbox').className = 'lightbox'; }
 
 // ── WIRE EVENTS ───────────────────────────────────────────────────
 document.getElementById('btnCancel').onclick = closeModal;
 document.getElementById('btnSave').onclick = saveItem;
 document.getElementById('btnDelete').onclick = deleteItem;
-document.getElementById('overlay').onclick = function(e) { if (e.target===this) closeModal(); };
-document.getElementById('uploadArea').onclick = function() { document.getElementById('fImgInput').click(); };
-document.getElementById('fImgInput').onchange = handleImgUpload;
-document.getElementById('lbClose').onclick = closeLb;
-document.getElementById('lightbox').onclick = function(e) { if (e.target===this) closeLb(); };
-document.getElementById('lbPrev').onclick = function() { lbIndex=(lbIndex-1+lbImages.length)%lbImages.length; showLb(); };
-document.getElementById('lbNext').onclick = function() { lbIndex=(lbIndex+1)%lbImages.length; showLb(); };
+document.getElementById('btnAddLink').onclick = addLinkRow;
+document.getElementById('overlay').onclick = function(e) { if (e.target === this) closeModal(); };
 
 initDaySelect();
 loadAll();

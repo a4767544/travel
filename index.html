@@ -107,9 +107,12 @@ main{max-width:680px;margin:0 auto;padding:16px;padding-bottom:50px;}
     <div class="field"><label>位置名稱（顯示用）</label><input type="text" id="fLoc" placeholder="例：天安門廣場"></div>
     <div class="field"><label>地圖連結（貼上 Google Maps 網址）</label><input type="text" id="fMapUrl" placeholder="https://maps.app.goo.gl/..."></div>
     <div class="field">
-      <label>自訂連結（可多筆）</label>
+      <label>圖片連結（上傳後自動產生連結）</label>
+      <div class="img-upload-area" id="uploadArea">
+        <input type="file" id="fImgInput" accept="image/*" multiple style="display:none">
+        <span style="font-size:.95rem;color:#555">&#128247; 點此上傳圖片（可多張）</span>
+      </div>
       <div id="linkRows"></div>
-      <button class="link-add" id="btnAddLink">＋ 新增連結</button>
     </div>
     <div class="field"><label>備注</label><textarea id="fNote" placeholder="例：需提前預約，帶好護照"></textarea></div>
     <div class="modal-actions">
@@ -451,43 +454,133 @@ function deleteItem() {
   apiCall({action:'delete', id:delId}, function(err) { showToast(err ? '同步失敗' : '已刪除'); });
 }
 
-// ── 自訂連結 ──────────────────────────────────────────────────────
+// ── 圖片上傳產生連結 ──────────────────────────────────────────────
 function renderLinkRows() {
   var container = document.getElementById('linkRows');
   while (container.firstChild) container.removeChild(container.firstChild);
   for (var i = 0; i < pendingLinks.length; i++) {
     (function(idx) {
       var row = el('div', 'link-row');
+
       var inpLabel = document.createElement('input');
-      inpLabel.type = 'text'; inpLabel.placeholder = '名稱（如：景點照片）';
+      inpLabel.type = 'text';
+      inpLabel.placeholder = '名稱（如：房間照片）';
       inpLabel.value = pendingLinks[idx].label;
       inpLabel.oninput = (function(n) { return function() { pendingLinks[n].label = this.value; }; })(idx);
 
-      var inpUrl = document.createElement('input');
-      inpUrl.type = 'text'; inpUrl.placeholder = 'https://...';
-      inpUrl.value = pendingLinks[idx].url;
-      inpUrl.oninput = (function(n) { return function() { pendingLinks[n].url = this.value; }; })(idx);
+      var urlSpan = el('span');
+      urlSpan.style.cssText = 'font-size:.8rem;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+      urlSpan.textContent = pendingLinks[idx].url ? '已上傳 ✓' : '上傳中...';
 
       var rmBtn = tx(el('button', 'link-rm'), '\u2715');
       rmBtn.onclick = (function(n) { return function() { pendingLinks.splice(n, 1); renderLinkRows(); }; })(idx);
 
-      row.appendChild(inpLabel); row.appendChild(inpUrl); row.appendChild(rmBtn);
+      row.appendChild(inpLabel);
+      row.appendChild(urlSpan);
+      row.appendChild(rmBtn);
       container.appendChild(row);
     })(i);
   }
 }
 
-function addLinkRow() {
-  pendingLinks.push({ label: '', url: '' });
-  renderLinkRows();
+function handleImgUpload(e) {
+  var files = e.target.files;
+  if (!files || !files.length) return;
+  showToast('上傳中...');
+  for (var i = 0; i < files.length; i++) {
+    (function(f) {
+      // 先佔位
+      var idx = pendingLinks.length;
+      pendingLinks.push({ label: f.name.replace(/\.[^.]+$/, ''), url: '' });
+      renderLinkRows();
+
+      compressAndUpload(f, idx);
+    })(files[i]);
+  }
+  e.target.value = '';
+}
+
+function compressAndUpload(file, idx) {
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var w = img.width, h = img.height;
+      var maxW = 1200;
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      var base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+      uploadToDrive(base64, file.name || ('img_' + Date.now() + '.jpg'), idx);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function uploadToDrive(base64, fileName, idx) {
+  var iframeName = '__drv' + (++cbIndex);
+  var form = document.createElement('form');
+  form.method = 'POST';
+  form.action = API;
+  form.target = iframeName;
+  form.style.display = 'none';
+
+  function addField(n, v) {
+    var inp = document.createElement('input');
+    inp.type = 'hidden'; inp.name = n; inp.value = v;
+    form.appendChild(inp);
+  }
+  addField('action', 'uploadImage');
+  addField('data', base64);
+  addField('mimeType', 'image/jpeg');
+  addField('fileName', fileName);
+
+  var iframe = document.createElement('iframe');
+  iframe.name = iframeName;
+  iframe.style.display = 'none';
+
+  var timer = setTimeout(function() {
+    cleanup();
+    showToast('上傳逾時');
+  }, 30000);
+
+  function cleanup() {
+    clearTimeout(timer);
+    if (form.parentNode) form.parentNode.removeChild(form);
+    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+  }
+
+  iframe.onload = function() {
+    try {
+      var txt = (iframe.contentDocument || iframe.contentWindow.document).body.innerText;
+      var res = JSON.parse(txt);
+      if (res.ok && res.url) {
+        pendingLinks[idx].url = res.url;
+        renderLinkRows();
+        showToast('上傳成功 ✓');
+      } else {
+        showToast('上傳失敗');
+      }
+    } catch(ex) {
+      showToast('上傳失敗');
+    }
+    cleanup();
+  };
+
+  document.body.appendChild(iframe);
+  document.body.appendChild(form);
+  form.submit();
 }
 
 // ── WIRE EVENTS ───────────────────────────────────────────────────
 document.getElementById('btnCancel').onclick = closeModal;
 document.getElementById('btnSave').onclick = saveItem;
 document.getElementById('btnDelete').onclick = deleteItem;
-document.getElementById('btnAddLink').onclick = addLinkRow;
 document.getElementById('overlay').onclick = function(e) { if (e.target === this) closeModal(); };
+document.getElementById('uploadArea').onclick = function() { document.getElementById('fImgInput').click(); };
+document.getElementById('fImgInput').onchange = handleImgUpload;
 
 initDaySelect();
 loadAll();

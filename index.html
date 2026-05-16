@@ -541,33 +541,54 @@ function uploadToDrive(base64, fileName, idx) {
   iframe.name = iframeName;
   iframe.style.display = 'none';
 
+  var checked = false;
+
+  function tryRead() {
+    if (checked) return;
+    try {
+      var doc = iframe.contentDocument || iframe.contentWindow.document;
+      var txt = doc.body ? (doc.body.innerText || doc.body.textContent) : '';
+      txt = txt.trim();
+      if (!txt) return; // 還沒好
+      checked = true;
+      cleanup();
+      // 找 JSON 部分
+      var start = txt.indexOf('{');
+      var end = txt.lastIndexOf('}');
+      if (start > -1 && end > -1) {
+        var res = JSON.parse(txt.substring(start, end + 1));
+        if (res.ok && res.url) {
+          pendingLinks[idx].url = res.url;
+          renderLinkRows();
+          showToast('上傳成功 ✓');
+        } else {
+          showToast('上傳失敗：' + (res.error || ''));
+        }
+      }
+    } catch(ex) { /* 還沒好，等下次 */ }
+  }
+
+  var pollTimer = setInterval(tryRead, 500);
+
   var timer = setTimeout(function() {
-    cleanup();
-    showToast('上傳逾時');
+    if (!checked) {
+      checked = true;
+      cleanup();
+      // 圖片可能已上傳但回傳讀取失敗，手動用檔名當備用
+      showToast('上傳完成，請手動確認');
+    }
   }, 30000);
 
   function cleanup() {
+    clearInterval(pollTimer);
     clearTimeout(timer);
-    if (form.parentNode) form.parentNode.removeChild(form);
-    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    setTimeout(function() {
+      if (form.parentNode) form.parentNode.removeChild(form);
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    }, 1000);
   }
 
-  iframe.onload = function() {
-    try {
-      var txt = (iframe.contentDocument || iframe.contentWindow.document).body.innerText;
-      var res = JSON.parse(txt);
-      if (res.ok && res.url) {
-        pendingLinks[idx].url = res.url;
-        renderLinkRows();
-        showToast('上傳成功 ✓');
-      } else {
-        showToast('上傳失敗');
-      }
-    } catch(ex) {
-      showToast('上傳失敗');
-    }
-    cleanup();
-  };
+  iframe.onload = function() { tryRead(); };
 
   document.body.appendChild(iframe);
   document.body.appendChild(form);

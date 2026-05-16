@@ -499,6 +499,34 @@ function uploadToCloudinary(file, idx) {
   xhr.send(formData);
 }
 
+function renderLinkRows() {
+  var container = document.getElementById('linkRows');
+  while (container.firstChild) container.removeChild(container.firstChild);
+  for (var i = 0; i < pendingLinks.length; i++) {
+    (function(idx) {
+      var row = el('div', 'link-row');
+
+      var inpLabel = document.createElement('input');
+      inpLabel.type = 'text';
+      inpLabel.placeholder = '名稱（如：房間照片）';
+      inpLabel.value = pendingLinks[idx].label;
+      inpLabel.oninput = (function(n) { return function() { pendingLinks[n].label = this.value; }; })(idx);
+
+      var urlSpan = el('span');
+      urlSpan.style.cssText = 'font-size:.8rem;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+      urlSpan.textContent = pendingLinks[idx].url ? '已上傳 \u2713' : '上傳中...';
+
+      var rmBtn = tx(el('button', 'link-rm'), '\u2715');
+      rmBtn.onclick = (function(n) { return function() { pendingLinks.splice(n, 1); renderLinkRows(); }; })(idx);
+
+      row.appendChild(inpLabel);
+      row.appendChild(urlSpan);
+      row.appendChild(rmBtn);
+      container.appendChild(row);
+    })(i);
+  }
+}
+
 // ── WIRE EVENTS ───────────────────────────────────────────────────
 document.getElementById('btnCancel').onclick = closeModal;
 document.getElementById('btnSave').onclick = saveItem;

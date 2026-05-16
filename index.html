@@ -454,34 +454,9 @@ function deleteItem() {
   apiCall({action:'delete', id:delId}, function(err) { showToast(err ? '同步失敗' : '已刪除'); });
 }
 
-// ── 圖片上傳產生連結 ──────────────────────────────────────────────
-function renderLinkRows() {
-  var container = document.getElementById('linkRows');
-  while (container.firstChild) container.removeChild(container.firstChild);
-  for (var i = 0; i < pendingLinks.length; i++) {
-    (function(idx) {
-      var row = el('div', 'link-row');
-
-      var inpLabel = document.createElement('input');
-      inpLabel.type = 'text';
-      inpLabel.placeholder = '名稱（如：房間照片）';
-      inpLabel.value = pendingLinks[idx].label;
-      inpLabel.oninput = (function(n) { return function() { pendingLinks[n].label = this.value; }; })(idx);
-
-      var urlSpan = el('span');
-      urlSpan.style.cssText = 'font-size:.8rem;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
-      urlSpan.textContent = pendingLinks[idx].url ? '已上傳 ✓' : '上傳中...';
-
-      var rmBtn = tx(el('button', 'link-rm'), '\u2715');
-      rmBtn.onclick = (function(n) { return function() { pendingLinks.splice(n, 1); renderLinkRows(); }; })(idx);
-
-      row.appendChild(inpLabel);
-      row.appendChild(urlSpan);
-      row.appendChild(rmBtn);
-      container.appendChild(row);
-    })(i);
-  }
-}
+// ── 圖片上傳到 Cloudinary ─────────────────────────────────────────
+var CLOUD_NAME = 'dcazghhdq';
+var UPLOAD_PRESET = 'kzqcirou';
 
 function handleImgUpload(e) {
   var files = e.target.files;
@@ -489,110 +464,39 @@ function handleImgUpload(e) {
   showToast('上傳中...');
   for (var i = 0; i < files.length; i++) {
     (function(f) {
-      // 先佔位
       var idx = pendingLinks.length;
-      pendingLinks.push({ label: f.name.replace(/\.[^.]+$/, ''), url: '' });
+      var label = f.name.replace(/\.[^.]+$/, '');
+      pendingLinks.push({ label: label, url: '' });
       renderLinkRows();
-
-      compressAndUpload(f, idx);
+      uploadToCloudinary(f, idx);
     })(files[i]);
   }
   e.target.value = '';
 }
 
-function compressAndUpload(file, idx) {
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    var img = new Image();
-    img.onload = function() {
-      var canvas = document.createElement('canvas');
-      var w = img.width, h = img.height;
-      var maxW = 1200;
-      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      var base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-      uploadToDrive(base64, file.name || ('img_' + Date.now() + '.jpg'), idx);
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-}
+function uploadToCloudinary(file, idx) {
+  var formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', UPLOAD_PRESET);
 
-function uploadToDrive(base64, fileName, idx) {
-  var iframeName = '__drv' + (++cbIndex);
-  var form = document.createElement('form');
-  form.method = 'POST';
-  form.action = API;
-  form.target = iframeName;
-  form.style.display = 'none';
-
-  function addField(n, v) {
-    var inp = document.createElement('input');
-    inp.type = 'hidden'; inp.name = n; inp.value = v;
-    form.appendChild(inp);
-  }
-  addField('action', 'uploadImage');
-  addField('data', base64);
-  addField('mimeType', 'image/jpeg');
-  addField('fileName', fileName);
-
-  var iframe = document.createElement('iframe');
-  iframe.name = iframeName;
-  iframe.style.display = 'none';
-
-  var checked = false;
-
-  function tryRead() {
-    if (checked) return;
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', 'https://api.cloudinary.com/v1_1/' + CLOUD_NAME + '/image/upload', true);
+  xhr.onload = function() {
     try {
-      var doc = iframe.contentDocument || iframe.contentWindow.document;
-      var txt = doc.body ? (doc.body.innerText || doc.body.textContent) : '';
-      txt = txt.trim();
-      if (!txt) return; // 還沒好
-      checked = true;
-      cleanup();
-      // 找 JSON 部分
-      var start = txt.indexOf('{');
-      var end = txt.lastIndexOf('}');
-      if (start > -1 && end > -1) {
-        var res = JSON.parse(txt.substring(start, end + 1));
-        if (res.ok && res.url) {
-          pendingLinks[idx].url = res.url;
-          renderLinkRows();
-          showToast('上傳成功 ✓');
-        } else {
-          showToast('上傳失敗：' + (res.error || ''));
-        }
+      var res = JSON.parse(xhr.responseText);
+      if (res.secure_url) {
+        pendingLinks[idx].url = res.secure_url;
+        renderLinkRows();
+        showToast('上傳成功 ✓');
+      } else {
+        showToast('上傳失敗');
       }
-    } catch(ex) { /* 還沒好，等下次 */ }
-  }
-
-  var pollTimer = setInterval(tryRead, 500);
-
-  var timer = setTimeout(function() {
-    if (!checked) {
-      checked = true;
-      cleanup();
-      // 圖片可能已上傳但回傳讀取失敗，手動用檔名當備用
-      showToast('上傳完成，請手動確認');
+    } catch(ex) {
+      showToast('上傳失敗');
     }
-  }, 30000);
-
-  function cleanup() {
-    clearInterval(pollTimer);
-    clearTimeout(timer);
-    setTimeout(function() {
-      if (form.parentNode) form.parentNode.removeChild(form);
-      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-    }, 1000);
-  }
-
-  iframe.onload = function() { tryRead(); };
-
-  document.body.appendChild(iframe);
-  document.body.appendChild(form);
-  form.submit();
+  };
+  xhr.onerror = function() { showToast('網路錯誤'); };
+  xhr.send(formData);
 }
 
 // ── WIRE EVENTS ───────────────────────────────────────────────────
